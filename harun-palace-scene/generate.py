@@ -56,7 +56,10 @@ async def make_speech(out: Path):
     import edge_tts
 
     # Deep, calm male voice; slightly slower for gravitas.
-    await edge_tts.Communicate(LINE, "ar-SA-HamedNeural", rate="-10%").save(str(out))
+    import os
+
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy")  # aiohttp ignores env proxies
+    await edge_tts.Communicate(LINE, "ar-SA-HamedNeural", rate="-10%", proxy=proxy).save(str(out))
 
 
 def mux(video: Path, speech: Path, out: Path, delay_ms: int):
