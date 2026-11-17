@@ -41,14 +41,23 @@ def main():
     p.add_argument("--seed", type=int, default=800)
     p.add_argument("--delay-ms", type=int, default=400)
     p.add_argument("--outdir", default="output_cpu")
+    p.add_argument("--encode-only", action="store_true",
+                   help="encode the prompt, save embeds.pt and exit (lets you delete the text encoder before downloading the rest)")
     a = p.parse_args()
     torch.set_num_threads(torch.get_num_threads())
     out = g.HERE / a.outdir
     out.mkdir(exist_ok=True)
 
     t0 = time.time()
-    pos, neg = encode([(g.HERE / "prompt.txt").read_text().strip(), g.NEGATIVE])
-    print(f"encoded prompt in {time.time()-t0:.0f}s", flush=True)
+    cache = out / "embeds.pt"
+    if cache.exists():
+        pos, neg = torch.load(cache)
+    else:
+        pos, neg = encode([(g.HERE / "prompt.txt").read_text().strip(), g.NEGATIVE])
+        torch.save((pos, neg), cache)
+        print(f"encoded prompt in {time.time()-t0:.0f}s", flush=True)
+    if a.encode_only:
+        return
 
     vae = AutoencoderKLWan.from_pretrained(REPO, subfolder="vae", torch_dtype=torch.float32)
     pipe = WanPipeline.from_pretrained(REPO, vae=vae, text_encoder=None, tokenizer=None, torch_dtype=torch.bfloat16)
